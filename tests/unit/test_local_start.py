@@ -10,6 +10,7 @@ def test_start_script_only_runs_compose() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     entrypoint = (ROOT / "scripts" / "entrypoint.sh").read_text(encoding="utf-8")
     assert "docker compose up --build" in script
+    assert "./scripts/start.sh" in readme
     assert "docker compose up --build" in readme
     assert ".env" not in script
     assert ".env" not in readme

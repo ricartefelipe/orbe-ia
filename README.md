@@ -4,9 +4,33 @@ Mesa de leitura de dossiês. A resposta em português cita o arquivo, o trecho e
 
 A versão `0.1.0` sobe a mesa local: recebe o arquivo, indexa o texto e responde a partir dos trechos recuperados.
 
+## Iniciar
+
+Na raiz do repositório:
+
+```bash
+./scripts/start.sh
+```
+
+A interface fica em http://127.0.0.1:8000/. O script executa `docker compose up --build` e não cria arquivo. Ele sobe o banco e a API juntos.
+
+Exporte `OPENAI_API_KEY` no ambiente antes do script quando for indexar ou perguntar. Sem a chave, a página abre e a operação avisa a falta. `LANGSMITH_API_KEY` liga o rastreio somente quando também está presente. As chaves não entram em arquivo versionado.
+
+`APP_ENV=production` recusa URL de banco sem host ou senha e recusa escutar em todas as interfaces.
+
+Para rodar a API no host, com o banco do Compose já saudável:
+
+```bash
+docker compose up -d db
+uv sync --frozen --all-groups
+uv run python -m orbe
+```
+
+O healthcheck da imagem consulta `/health/live`. O healthcheck do Compose consulta `/health/ready`.
+
 ## O que esta versão faz
 
-- Sobe a API e a página em `http://127.0.0.1:8000/` com `docker compose up --build`.
+- Sobe a API e a página em `http://127.0.0.1:8000/` com `./scripts/start.sh`.
 - Aceita PDF, Markdown e TXT. O nome gravado é o nome enviado, sem caminho.
 - Fragmenta o texto e grava os trechos no PostgreSQL com pgvector.
 - Reconhece o mesmo conteúdo pelo hash e devolve o registro já existente.
@@ -15,7 +39,6 @@ A versão `0.1.0` sobe a mesa local: recebe o arquivo, indexa o texto e responde
 - Se nenhum trecho fica perto da pergunta, a resposta é `O dossiê não cobre essa pergunta.` e o modelo de chat não é chamado.
 - Grava a pergunta, a resposta e as citações.
 - Recusa PDF sem texto. Não há OCR.
-- O processo sobe sem chave. Indexar ou perguntar falha com mensagem explícita até `OPENAI_API_KEY` existir no ambiente. `LANGSMITH_API_KEY` liga o rastreio somente quando também está presente. As chaves não entram em arquivo versionado.
 
 ## Arquitetura
 
@@ -38,30 +61,6 @@ A página em `/` é HTML, CSS e JavaScript servidos pelo mesmo processo. Ela usa
 - Docker Compose
 
 As versões resolvidas estão em `uv.lock`.
-
-## Executar
-
-Na raiz do repositório:
-
-```bash
-docker compose up --build
-```
-
-A interface fica em `http://127.0.0.1:8000/`. O mesmo comando está em `./scripts/start.sh`.
-
-`APP_ENV=production` recusa URL de banco sem host ou senha e recusa escutar em todas as interfaces.
-
-### No host
-
-Com o banco do Compose já saudável:
-
-```bash
-docker compose up -d db
-uv sync --frozen --all-groups
-uv run python -m orbe
-```
-
-O healthcheck da imagem consulta `/health/live`. O healthcheck do Compose consulta `/health/ready`.
 
 ## API
 
