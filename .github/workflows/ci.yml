@@ -1,0 +1,124 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gitflow:
+    name: gitflow
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Validate branch names
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -eu
+          case "$HEAD_REF" in
+            feature/*)
+              expected_bases="develop"
+              ;;
+            release/*|hotfix/*)
+              expected_bases="main develop"
+              ;;
+            *)
+              printf 'A branch %s está fora do GitFlow. Use feature/*, release/* ou hotfix/*.\n' "$HEAD_REF" >&2
+              exit 1
+              ;;
+          esac
+          valid=0
+          for base in $expected_bases; do
+            if [ "$BASE_REF" = "$base" ]; then
+              valid=1
+            fi
+          done
+          if [ "$valid" -ne 1 ]; then
+            printf 'A base %s não é destino válido para %s.\n' "$BASE_REF" "$HEAD_REF" >&2
+            exit 1
+          fi
+
+  quality:
+    name: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    if: hashFiles('pyproject.toml') != ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.0"
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen --all-groups
+
+      - name: Check formatting
+        run: uv run ruff format --check
+
+      - name: Lint
+        run: uv run ruff check
+
+      - name: Type check
+        run: uv run mypy
+
+      - name: Unit and API tests
+        run: uv run pytest tests/unit tests/api
+
+      - name: Audit dependencies
+        run: uv run pip-audit --progress-spinner off
+
+  integration:
+    name: integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    if: hashFiles('pyproject.toml') != ''
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg16
+        env:
+          POSTGRES_USER: orbe
+          POSTGRES_PASSWORD: orbe
+          POSTGRES_DB: orbe
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U orbe -d orbe"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      APP_ENV: test
+      DATABASE_URL: postgresql+psycopg://orbe:orbe@localhost:5432/orbe
+      OPENAI_API_KEY: ""
+      LANGSMITH_API_KEY: ""
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.0"
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen --all-groups
+
+      - name: Test with coverage
+        run: uv run pytest --cov-fail-under=85
