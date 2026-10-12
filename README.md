@@ -2,7 +2,7 @@
 
 Mesa de leitura de dossiês. A resposta em português cita o arquivo, o trecho e a posição. Se dois trechos se contradizem, os dois aparecem. Cada pergunta fica gravada com a resposta e as citações.
 
-A versão `0.1.0` sobe a mesa local: recebe o arquivo, indexa o texto e responde a partir dos trechos recuperados.
+A versão `0.1.1` sobe a mesa local: recebe o arquivo, indexa o texto e responde a partir dos trechos recuperados.
 
 ## Iniciar
 
@@ -110,4 +110,4 @@ A cobertura exigida é 85% do pacote `orbe`, com medição de ramos.
 - PDF digitalizado, sem texto, é recusado. Não há OCR.
 - A coluna vetorial está fixada em 1536 dimensões para `text-embedding-3-small`.
 - As credenciais do Compose são de desenvolvimento. Não as reutilize fora da máquina local.
-- A tag desta versão é `v0.1.0`.
+- A tag desta versão é `v0.1.1`.
