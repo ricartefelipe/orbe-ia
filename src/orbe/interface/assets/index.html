@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Orbe</title>
+    <link rel="stylesheet" href="/assets/app.css">
+  </head>
+  <body>
+    <div class="desk">
+      <aside class="spine">
+        <p class="brand">Orbe</p>
+        <p class="volume">Mesa de leitura</p>
+        <p class="edition">v0.1</p>
+      </aside>
+      <main class="sheet">
+        <header class="mast">
+          <h1>Dossiê com citação verificável</h1>
+          <p class="lede">
+            Envie um PDF, Markdown ou TXT. A resposta usa só os trechos recuperados.
+            Se dois trechos se contradizem, os dois aparecem.
+          </p>
+        </header>
+        <section class="panel" aria-labelledby="file-title">
+          <h2 id="file-title">Arquivo</h2>
+          <form id="upload-form">
+            <label for="file">PDF, Markdown ou TXT</label>
+            <div class="file-row">
+              <label class="choose" for="file">Escolher arquivo</label>
+              <span id="file-name">Nenhum arquivo escolhido</span>
+            </div>
+            <input id="file" name="file" type="file" accept=".pdf,.md,.markdown,.txt,text/plain,text/markdown,application/pdf" required>
+            <button type="submit">Indexar</button>
+          </form>
+          <p id="upload-status" role="status"></p>
+        </section>
+        <section class="panel" aria-labelledby="question-title">
+          <h2 id="question-title">Pergunta</h2>
+          <form id="query-form">
+            <label for="question">O que o dossiê diz?</label>
+            <textarea id="question" name="question" rows="4" maxlength="2000" required></textarea>
+            <button type="submit">Perguntar</button>
+          </form>
+          <p id="answer" role="status"></p>
+          <div id="citations"></div>
+        </section>
+      </main>
+    </div>
+    <noscript>
+      <p class="noscript">Esta página precisa de JavaScript para falar com a mesa.</p>
+    </noscript>
+    <script src="/assets/app.js"></script>
+  </body>
+</html>
