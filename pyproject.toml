@@ -1,6 +1,6 @@
 [project]
 name = "orbe-ia"
-version = "0.1.1"
+version = "0.2.0"
 description = "Mesa de leitura de dossiês com RAG, LangChain e citações verificáveis."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"

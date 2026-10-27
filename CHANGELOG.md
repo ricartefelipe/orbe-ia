@@ -1,6 +1,6 @@
 # Changelog
 
-## Não publicado
+## 0.2.0 - 2026-10-27
 
 - O envio acima do teto é recusado durante a leitura, antes de materializar o arquivo inteiro na memória.
 - A indexação roda fora do laço de eventos; a vida, a prontidão e as perguntas leves seguem respondendo durante um envio grande. `INDEX_MAX_CONCURRENCY` limita quantos arquivos indexam ao mesmo tempo.
