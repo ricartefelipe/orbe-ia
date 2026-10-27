@@ -34,6 +34,16 @@ class IndexedFile:
 
 
 @dataclass(frozen=True)
+class StoredDossier:
+    """A dossier file as recorded, with what deletion needs to find its excerpts."""
+
+    id: UUID
+    filename: str
+    content_sha256: str
+    chunk_count: int
+
+
+@dataclass(frozen=True)
 class AskedQuestion:
     """A persisted question together with the answer and its citations."""
 

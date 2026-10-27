@@ -45,7 +45,7 @@ class OpenAIEmbeddingAdapter(Embeddings):
                 openai_api_key=SecretStr(self._settings.openai_api_key),
                 dimensions=self._settings.embedding_dimensions,
                 request_timeout=self._settings.openai_timeout,
-                max_retries=1,
+                max_retries=self._settings.openai_max_retries,
             )
         return self._client
 

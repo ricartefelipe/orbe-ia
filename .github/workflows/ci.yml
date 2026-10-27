@@ -120,3 +120,22 @@ jobs:
 
       - name: Test with coverage
         run: uv run pytest --cov-fail-under=85
+
+  image-scan:
+    name: image-scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build the runtime image
+        run: docker build --tag orbe-api:ci .
+
+      - name: Scan the image for fixable HIGH/CRITICAL vulnerabilities
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.58.1@sha256:ab70a02200597efa04748f210f793936eb647cbcdb0ea69cc30b226d6f5a22c7 \
+            image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
+            --exit-code 1 --no-progress orbe-api:ci

@@ -19,3 +19,7 @@ class InvalidQuestion(OrbeError):
 
 class ModelCallFailed(OrbeError):
     """The model did not return a usable answer."""
+
+
+class DossierNotFound(OrbeError):
+    """No dossier file matches the given id."""

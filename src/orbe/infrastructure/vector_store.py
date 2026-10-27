@@ -19,6 +19,7 @@ class PgExcerptStore:
     """Adapter over PGVector. Scores are cosine distances."""
 
     def __init__(self, settings: Settings, embeddings: Embeddings, engine: Engine) -> None:
+        self._collection = settings.collection_name
         self._vector: Any = PGVector(
             embeddings=embeddings,
             connection=engine,
@@ -31,7 +32,7 @@ class PgExcerptStore:
             async_mode=False,
         )
 
-    def add(self, filename: str, chunks: Sequence[Chunk]) -> None:
+    def add(self, key: str, filename: str, chunks: Sequence[Chunk]) -> None:
         documents = [
             Document(
                 page_content=chunk.content,
@@ -39,8 +40,26 @@ class PgExcerptStore:
             )
             for chunk in chunks
         ]
+        # Deterministic ids keyed on the content fingerprint. PGVector upserts on
+        # conflicting ids, so re-indexing the same bytes after a crash replaces the
+        # same rows instead of appending duplicate excerpts. The id row is a global
+        # primary key, so the collection name scopes it to keep two collections that
+        # hold the same bytes from overwriting each other.
+        ids = [f"{self._collection}:{key}:{index}" for index in range(len(documents))]
         try:
-            self._vector.add_documents(documents)
+            self._vector.add_documents(documents, ids=ids)
+        except OrbeError:
+            raise
+        except Exception as exc:
+            log_failure(type(exc).__name__)
+            raise ModelCallFailed("O modelo não concluiu a resposta.") from None
+
+    def remove(self, key: str, count: int) -> None:
+        ids = [f"{self._collection}:{key}:{index}" for index in range(count)]
+        if not ids:
+            return
+        try:
+            self._vector.delete(ids=ids)
         except OrbeError:
             raise
         except Exception as exc:

@@ -1,10 +1,17 @@
 """Reading use cases."""
 
+from uuid import uuid4
+
 import pytest
 
 from orbe.application.chain import UNGROUNDED_ANSWER
 from orbe.application.reading import DossierIndexer, DossierReader
-from orbe.domain.errors import InvalidQuestion, MissingOpenAIKey, UnreadableDossier
+from orbe.domain.errors import (
+    DossierNotFound,
+    InvalidQuestion,
+    MissingOpenAIKey,
+    UnreadableDossier,
+)
 from orbe.domain.models import Chunk
 from tests.support import MemoryHistory, ScriptedChain, ScriptedStore, allow_key, settings
 
@@ -49,6 +56,23 @@ def test_duplicate_hash_skips_embedding() -> None:
     assert second.duplicate is True
     assert second.id == first.id
     assert len(store.added) == 1
+
+
+def test_remove_drops_excerpts_and_record() -> None:
+    store = ScriptedStore()
+    history = MemoryHistory()
+    indexer = _indexer(store, history)
+    indexed = indexer.index("prazo.txt", b"O prazo e de 30 dias.\n")
+    indexer.remove(indexed.id)
+    assert store.removed == [(store.add_keys[0], indexed.chunk_count)]
+    assert history.get_file(indexed.id) is None
+    assert history.find_file(store.add_keys[0]) is None
+
+
+def test_remove_unknown_file_raises() -> None:
+    indexer = _indexer(ScriptedStore(), MemoryHistory())
+    with pytest.raises(DossierNotFound, match="não existe"):
+        indexer.remove(uuid4())
 
 
 def test_far_excerpt_does_not_call_the_chain() -> None:

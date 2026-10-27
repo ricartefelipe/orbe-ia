@@ -14,6 +14,14 @@ class DocumentBody(BaseModel):
     duplicate: bool
 
 
+class DocumentSummary(BaseModel):
+    """One indexed file, as listed on the desk."""
+
+    id: UUID
+    filename: str
+    chunk_count: int
+
+
 class QueryIn(BaseModel):
     """A question about the indexed dossier."""
 

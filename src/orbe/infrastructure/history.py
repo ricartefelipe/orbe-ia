@@ -4,13 +4,13 @@ import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, select
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, delete, select
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
-from orbe.domain.models import AskedQuestion, Citation, IndexedFile
+from orbe.domain.models import AskedQuestion, Citation, IndexedFile, StoredDossier
 
 
 class Base(DeclarativeBase):
@@ -76,6 +76,37 @@ class SqlReadingHistory:
             chunk_count=row.chunk_count,
             duplicate=False,
         )
+
+    def list_files(self) -> list[StoredDossier]:
+        with Session(self._engine) as session:
+            rows = session.scalars(
+                select(DossierFileRow).order_by(DossierFileRow.created_at.desc())
+            ).all()
+        return [
+            StoredDossier(
+                id=row.id,
+                filename=row.filename,
+                content_sha256=row.content_sha256,
+                chunk_count=row.chunk_count,
+            )
+            for row in rows
+        ]
+
+    def get_file(self, file_id: uuid.UUID) -> StoredDossier | None:
+        with Session(self._engine) as session:
+            row = session.get(DossierFileRow, file_id)
+            if row is None:
+                return None
+            return StoredDossier(
+                id=row.id,
+                filename=row.filename,
+                content_sha256=row.content_sha256,
+                chunk_count=row.chunk_count,
+            )
+
+    def delete_file(self, file_id: uuid.UUID) -> None:
+        with Session(self._engine) as session, session.begin():
+            session.execute(delete(DossierFileRow).where(DossierFileRow.id == file_id))
 
     def save_file(self, filename: str, digest: str, chunk_count: int) -> IndexedFile:
         file_id = uuid.uuid4()
