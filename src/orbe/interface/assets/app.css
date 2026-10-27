@@ -183,6 +183,47 @@ textarea {
   white-space: pre-wrap;
 }
 
+.documents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.document {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.document:first-child {
+  border-top: 0;
+}
+
+.doc-name {
+  flex: 1;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.doc-count {
+  color: var(--muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.doc-remove {
+  border-color: var(--danger);
+  background: transparent;
+  color: var(--danger);
+  padding: 0.35rem 0.7rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
 .noscript {
   margin: 1rem;
 }

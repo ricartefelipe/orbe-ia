@@ -16,6 +16,12 @@ RUN uv sync --frozen --no-dev --no-editable --python /usr/local/bin/python3
 
 FROM python:3.12.12-slim-bookworm AS runtime
 
+# Pull the latest Debian security patches for the base OS packages (openssl, perl,
+# etc.) so the shipped image does not carry fixed base-image CVEs.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --system --gid 10001 orbe \
     && useradd --system --uid 10001 --gid orbe --create-home --home-dir /home/orbe orbe
 

@@ -2,12 +2,17 @@
 
 from pathlib import Path
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, File, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, Response
 
-from orbe.api.schemas import AnswerBody, CitationBody, DocumentBody, QueryIn
+from orbe.api.schemas import AnswerBody, CitationBody, DocumentBody, DocumentSummary, QueryIn
+from orbe.domain.errors import UnreadableDossier
 from orbe.infrastructure.readiness import database_ready
+
+_UPLOAD_CHUNK = 1024 * 1024
 
 _ASSETS = Path(__file__).resolve().parent.parent / "interface" / "assets"
 _CSP = (
@@ -52,6 +57,21 @@ def ready(request: Request) -> Response:
     )
 
 
+async def _read_within_limit(file: UploadFile, max_bytes: int) -> bytes:
+    """Read the upload in chunks and stop as soon as it passes the limit.
+
+    The oversized body is rejected before the whole file is held in memory, so a
+    chunked request without a declared length cannot be used to exhaust it.
+    """
+
+    buffer = bytearray()
+    while chunk := await file.read(_UPLOAD_CHUNK):
+        buffer.extend(chunk)
+        if len(buffer) > max_bytes:
+            raise UnreadableDossier("O arquivo excede o tamanho permitido.")
+    return bytes(buffer)
+
+
 @router.post("/api/v1/documents", status_code=201)
 async def create_document(
     request: Request,
@@ -59,14 +79,39 @@ async def create_document(
 ) -> DocumentBody:
     """Index one dossier file."""
 
-    content = await file.read()
-    indexed = request.app.state.indexer.index(file.filename or "", content)
+    settings = request.app.state.settings
+    async with request.app.state.index_semaphore:
+        content = await _read_within_limit(file, settings.document_max_bytes)
+        # Indexing parses the file, calls the embedding model, and writes to the
+        # database. Running it on a worker thread keeps the event loop free to
+        # answer health checks and light questions while a large file indexes.
+        indexed = await run_in_threadpool(
+            request.app.state.indexer.index, file.filename or "", content
+        )
     return DocumentBody(
         id=indexed.id,
         filename=indexed.filename,
         chunk_count=indexed.chunk_count,
         duplicate=indexed.duplicate,
     )
+
+
+@router.get("/api/v1/documents")
+def list_documents(request: Request) -> list[DocumentSummary]:
+    """List the indexed files, most recent first."""
+
+    return [
+        DocumentSummary(id=record.id, filename=record.filename, chunk_count=record.chunk_count)
+        for record in request.app.state.indexer.list()
+    ]
+
+
+@router.delete("/api/v1/documents/{document_id}", status_code=204)
+async def delete_document(request: Request, document_id: UUID) -> Response:
+    """Delete a dossier file and its excerpts. Answered questions keep their snapshots."""
+
+    await run_in_threadpool(request.app.state.indexer.remove, document_id)
+    return Response(status_code=204)
 
 
 @router.post("/api/v1/queries")

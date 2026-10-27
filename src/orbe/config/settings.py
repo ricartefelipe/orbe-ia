@@ -44,12 +44,14 @@ class Settings(BaseSettings):
     db_pool_timeout: float = Field(default=30, gt=0, le=120)
     db_connect_timeout: int = Field(default=5, ge=1, le=60)
     document_max_bytes: int = Field(default=10_485_760, ge=1, le=52_428_800)
+    index_max_concurrency: int = Field(default=2, ge=1, le=16)
     chunk_size: int = Field(default=1000, ge=1, le=8000)
     chunk_overlap: int = Field(default=200, ge=0, le=7999)
     openai_api_key: str = Field(default="", repr=False)
     openai_chat_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-small"
     openai_timeout: float = Field(default=30, gt=0, le=120)
+    openai_max_retries: int = Field(default=2, ge=0, le=5)
     embedding_dimensions: int = Field(default=1536, ge=1, le=3072)
     langsmith_api_key: str = Field(default="", repr=False)
     langsmith_project: str = "orbe"

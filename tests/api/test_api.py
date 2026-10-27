@@ -1,6 +1,7 @@
 """HTTP desk."""
 
 from collections.abc import Iterator
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -46,6 +47,16 @@ def test_live_page_and_favicon(client: tuple[TestClient, ScriptedStore, Scripted
     assert "/" not in schema["paths"]
 
 
+def test_request_id_is_returned_and_echoed(
+    client: tuple[TestClient, ScriptedStore, ScriptedChain],
+) -> None:
+    test_client, _store, _chain = client
+    generated = test_client.get("/health/live")
+    assert generated.headers["x-request-id"]
+    echoed = test_client.get("/health/live", headers={"X-Request-ID": "pedido-123"})
+    assert echoed.headers["x-request-id"] == "pedido-123"
+
+
 def test_ready_without_database_is_unavailable(
     client: tuple[TestClient, ScriptedStore, ScriptedChain],
 ) -> None:
@@ -72,6 +83,40 @@ def test_upload_and_question(client: tuple[TestClient, ScriptedStore, ScriptedCh
     assert body["grounded"] is True
     assert body["citations"][0]["filename"] == "prazo.txt"
     assert "prazo" in body["citations"][0]["content"]
+
+
+def test_list_documents(client: tuple[TestClient, ScriptedStore, ScriptedChain]) -> None:
+    test_client, _store, _chain = client
+    assert test_client.get("/api/v1/documents").json() == []
+    test_client.post(
+        "/api/v1/documents",
+        files={"file": ("prazo.txt", b"O prazo e de 30 dias.\n", "text/plain")},
+    )
+    listed = test_client.get("/api/v1/documents")
+    assert listed.status_code == 200
+    body = listed.json()
+    assert len(body) == 1
+    assert body[0]["filename"] == "prazo.txt"
+    assert body[0]["chunk_count"] >= 1
+    assert "id" in body[0]
+
+
+def test_delete_document(client: tuple[TestClient, ScriptedStore, ScriptedChain]) -> None:
+    test_client, store, _chain = client
+    uploaded = test_client.post(
+        "/api/v1/documents",
+        files={"file": ("prazo.txt", b"O prazo e de 30 dias.\n", "text/plain")},
+    )
+    document_id = uploaded.json()["id"]
+    deleted = test_client.delete(f"/api/v1/documents/{document_id}")
+    assert deleted.status_code == 204
+    assert store.removed
+    missing = test_client.delete(f"/api/v1/documents/{uuid4()}")
+    assert missing.status_code == 404
+    assert missing.headers["content-type"].startswith("application/problem+json")
+    assert "input" not in missing.json()
+    malformed = test_client.delete("/api/v1/documents/nao-e-uuid")
+    assert malformed.status_code == 422
 
 
 def test_missing_key_and_unreadable_file(
