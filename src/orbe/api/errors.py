@@ -5,7 +5,13 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from orbe.domain.errors import InvalidQuestion, MissingOpenAIKey, ModelCallFailed, UnreadableDossier
+from orbe.domain.errors import (
+    DossierNotFound,
+    InvalidQuestion,
+    MissingOpenAIKey,
+    ModelCallFailed,
+    UnreadableDossier,
+)
 from orbe.logging import log_failure
 
 _UNEXPECTED = "A mesa não conseguiu concluir a operação."
@@ -40,6 +46,10 @@ def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(InvalidQuestion)
     async def invalid_question(_request: Request, exc: InvalidQuestion) -> JSONResponse:
         return problem(422, str(exc), "Pergunta inválida")
+
+    @app.exception_handler(DossierNotFound)
+    async def not_found(_request: Request, exc: DossierNotFound) -> JSONResponse:
+        return problem(404, str(exc), "Documento não encontrado")
 
     @app.exception_handler(ModelCallFailed)
     async def model_failed(_request: Request, exc: ModelCallFailed) -> JSONResponse:

@@ -6,6 +6,8 @@ const queryForm = document.querySelector("#query-form");
 const questionInput = document.querySelector("#question");
 const answer = document.querySelector("#answer");
 const citations = document.querySelector("#citations");
+const documentsList = document.querySelector("#documents");
+const documentsEmpty = document.querySelector("#documents-empty");
 
 fileInput.addEventListener("change", () => {
   const chosen = fileInput.files && fileInput.files[0];
@@ -32,6 +34,7 @@ uploadForm.addEventListener("submit", async (event) => {
   }
   const duplicate = payload.duplicate ? " Arquivo já indexado." : "";
   uploadStatus.textContent = "Indexado: " + payload.filename + "." + duplicate;
+  loadDocuments();
 });
 
 queryForm.addEventListener("submit", async (event) => {
@@ -65,11 +68,54 @@ queryForm.addEventListener("submit", async (event) => {
   });
 });
 
+async function loadDocuments() {
+  const response = await fetch("/api/v1/documents");
+  const payload = await readJson(response);
+  const items = Array.isArray(payload) ? payload : [];
+  clear(documentsList);
+  documentsEmpty.hidden = items.length > 0;
+  items.forEach((item) => {
+    const row = document.createElement("li");
+    row.className = "document";
+    const name = document.createElement("span");
+    name.className = "doc-name";
+    name.textContent = item.filename || "";
+    const count = document.createElement("span");
+    count.className = "doc-count";
+    count.textContent = String(item.chunk_count) + " trechos";
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "doc-remove";
+    remove.textContent = "Excluir";
+    remove.addEventListener("click", () => deleteDocument(item.id, item.filename));
+    row.append(name, count, remove);
+    documentsList.append(row);
+  });
+}
+
+async function deleteDocument(id, name) {
+  if (!window.confirm('Excluir "' + name + '" do índice?')) {
+    return;
+  }
+  const response = await fetch("/api/v1/documents/" + encodeURIComponent(id), {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const payload = await readJson(response);
+    uploadStatus.textContent = detailOf(payload);
+    return;
+  }
+  uploadStatus.textContent = "Excluído: " + name + ".";
+  loadDocuments();
+}
+
 function clear(node) {
   while (node.firstChild) {
     node.removeChild(node.firstChild);
   }
 }
+
+loadDocuments();
 
 async function readJson(response) {
   const text = await response.text();

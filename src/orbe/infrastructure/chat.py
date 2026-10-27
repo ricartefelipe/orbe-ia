@@ -26,7 +26,7 @@ class OpenAIAnswerChain:
                 model=self._settings.openai_chat_model,
                 api_key=SecretStr(self._settings.openai_api_key),
                 timeout=self._settings.openai_timeout,
-                max_retries=1,
+                max_retries=self._settings.openai_max_retries,
             )
             return LangChainAnswer(chat).answer(question, chunks)
         except OrbeError:
