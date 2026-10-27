@@ -34,7 +34,7 @@ uploadForm.addEventListener("submit", async (event) => {
   }
   const duplicate = payload.duplicate ? " Arquivo já indexado." : "";
   uploadStatus.textContent = "Indexado: " + payload.filename + "." + duplicate;
-  loadDocuments();
+  void loadDocuments();
 });
 
 queryForm.addEventListener("submit", async (event) => {
@@ -87,7 +87,7 @@ async function loadDocuments() {
     remove.type = "button";
     remove.className = "doc-remove";
     remove.textContent = "Excluir";
-    remove.addEventListener("click", () => deleteDocument(item.id, item.filename));
+    remove.addEventListener("click", () => void deleteDocument(item.id, item.filename));
     row.append(name, count, remove);
     documentsList.append(row);
   });
@@ -106,7 +106,7 @@ async function deleteDocument(id, name) {
     return;
   }
   uploadStatus.textContent = "Excluído: " + name + ".";
-  loadDocuments();
+  void loadDocuments();
 }
 
 function clear(node) {
@@ -115,7 +115,7 @@ function clear(node) {
   }
 }
 
-loadDocuments();
+void loadDocuments();
 
 async function readJson(response) {
   const text = await response.text();
