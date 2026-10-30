@@ -1,4 +1,6 @@
-FROM python:3.12.12-slim-bookworm AS builder
+# Base Alpine (musl) por digest: menos pacotes de SO e correções publicadas aplicadas no build.
+# python:3.12.12-alpine3.22
+FROM python@sha256:848ba4413eb897e225159b8fc1b02094576cbae4aa73fc13142608ae2c8c0e32 AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.13.0 /uv /bin/uv
 
@@ -11,19 +13,18 @@ WORKDIR /app
 COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
 
+# Instalação congelada pelo uv.lock (wheels musllinux para psycopg[binary], pydantic-core, numpy, tiktoken).
 RUN uv sync --frozen --no-dev --no-editable --python /usr/local/bin/python3
 
 
-FROM python:3.12.12-slim-bookworm AS runtime
+FROM python@sha256:848ba4413eb897e225159b8fc1b02094576cbae4aa73fc13142608ae2c8c0e32 AS runtime
 
-# Pull the latest Debian security patches for the base OS packages (openssl, perl,
-# etc.) so the shipped image does not carry fixed base-image CVEs.
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && rm -rf /var/lib/apt/lists/*
+# Correções de segurança publicadas para a base; ca-certificates para TLS de saída (provedor OpenAI-compatível).
+RUN apk upgrade --no-cache \
+    && apk add --no-cache ca-certificates
 
-RUN groupadd --system --gid 10001 orbe \
-    && useradd --system --uid 10001 --gid orbe --create-home --home-dir /home/orbe orbe
+RUN addgroup -S -g 10001 orbe \
+    && adduser -S -u 10001 -G orbe -h /home/orbe orbe
 
 WORKDIR /app
 
