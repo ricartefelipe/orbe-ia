@@ -132,10 +132,15 @@ jobs:
       - name: Build the runtime image
         run: docker build --tag orbe-api:ci .
 
-      - name: Scan the image for fixable HIGH/CRITICAL vulnerabilities
+      # Gate bloqueante: qualquer HIGH/CRITICAL (com ou sem correção publicada) reprova o job.
+      # Sem --ignore-unfixed, sem exit-code 0, sem continue-on-error e sem lista de exclusão.
+      - name: Scan the final image (HIGH/CRITICAL block, unfixed included)
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy:0.58.1@sha256:ab70a02200597efa04748f210f793936eb647cbcdb0ea69cc30b226d6f5a22c7 \
-            image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
+            aquasec/trivy:0.69.3@sha256:bcc376de8d77cfe086a917230e818dc9f8528e3c852f7b1aff648949b6258d1c \
+            image --scanners vuln --severity HIGH,CRITICAL \
             --exit-code 1 --no-progress orbe-api:ci
+
+      - name: Record the scanned image digest and platform
+        run: docker image inspect orbe-api:ci --format 'id={{.Id}} os={{.Os}} arch={{.Architecture}} user={{.Config.User}}'
